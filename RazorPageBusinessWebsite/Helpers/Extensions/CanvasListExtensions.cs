@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 
 namespace RazorPageBusinessWebsite.Helpers.Extensions
 {
+    /// <summary>
     /// Helper extension methods for rendering lists
     /// </summary>
     public static class CanvasListExtensions
@@ -46,7 +47,9 @@ namespace RazorPageBusinessWebsite.Helpers.Extensions
             return html.ToString();
         }
 
-
+        /// <summary>
+        /// Renders the list as HTML with support for nested lists
+        /// </summary>
         public static string RenderHtmlRecursive(this CanvasListBlock list, string cssClass = "shade-black")
         {
             if (list?.Value == null || list.Value.Count == 0)
@@ -58,7 +61,6 @@ namespace RazorPageBusinessWebsite.Helpers.Extensions
 
             foreach (var item in list.Value)
             {
-                // Check if this item contains a nested list
                 string content = ExtractContentWithNestedList(item);
                 html.Append($"<li>{content}</li>");
             }
@@ -69,14 +71,11 @@ namespace RazorPageBusinessWebsite.Helpers.Extensions
 
         private static string ExtractContentWithNestedList(CanvasListItem item)
         {
-            // This would need to inspect the item.Content for any nested _list blocks
-            // Implementation depends on how your Canvas structures nested lists
-            // Usually, a nested list would be another _list block inside the item's value
             return ExtractTextContent(item.Content);
         }
 
         /// <summary>
-        /// Extracts text from IValue (handles SimpleValue and ComplexValue)
+        /// Extracts text/HTML from IValue (handles SimpleValue, ComplexValue with all fragment types)
         /// </summary>
         private static string ExtractTextContent(IValue? value)
         {
@@ -89,25 +88,61 @@ namespace RazorPageBusinessWebsite.Helpers.Extensions
             }
             else if (value is ComplexValue complex)
             {
-                // Combine all text fragments
                 var fragments = new List<string>();
                 foreach (var fragment in complex.Fragments)
                 {
-                    if (fragment is TextFragment text)
-                        fragments.Add(text.Text ?? string.Empty);
-                    else if (fragment is HtmlFragment html)
-                        fragments.Add(html.HtmlContent ?? string.Empty);
-                    else if (fragment is LinkFragment link)
-                        fragments.Add($"<a href=\"{link.Url}\">{link.Text}</a>");
-                    else if (fragment is ImageFragment image)
-                        fragments.Add($"<img src=\"{image.Source}\" alt=\"{image.AltText}\" />");
-                    else
-                        fragments.Add(fragment.Text ?? string.Empty);
+                    fragments.Add(RenderFragment(fragment));
                 }
                 return string.Join("", fragments);
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Renders a single fragment to HTML string
+        /// </summary>
+        private static string RenderFragment(ContentFragment fragment)
+        {
+            if (fragment == null)
+                return string.Empty;
+
+            // Check for LinkFragment
+            if (fragment is LinkFragment link)
+            {
+                string linkText = link.Text ?? string.Empty;
+                string url = link.Url ?? "#";
+                return $"<a href=\"{url}\">{linkText}</a>";
+            }
+
+            // Check for HtmlFragment
+            if (fragment is HtmlFragment html)
+            {
+                return html.HtmlContent ?? string.Empty;
+            }
+
+            // Check for ImageFragment
+            if (fragment is ImageFragment image)
+            {
+                return $"<img src=\"{image.Source}\" alt=\"{image.AltText}\" />";
+            }
+
+            // Check for TextFragment
+            if (fragment is TextFragment text)
+            {
+                return text.Text ?? string.Empty;
+            }
+
+            // Check by type string as fallback
+            if (fragment.Type == "_link")
+            {
+                string linkText = fragment.Text ?? string.Empty;
+                string url = fragment.Properties?.Link?.System?.Uri ?? "#";
+                return $"<a href=\"{url}\">{linkText}</a>";
+            }
+
+            // Fallback for any other fragment type
+            return fragment.Text ?? string.Empty;
         }
 
         /// <summary>

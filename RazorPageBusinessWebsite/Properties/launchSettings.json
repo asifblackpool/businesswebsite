@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "https://localhost:5001/business/business-support-and-advice/healthier-choices-award/healthier-choices-award",
+      "applicationUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
       "sslPort": 44322
     }
   },
@@ -13,7 +13,7 @@
       "hotReloadProfile": "aspnetcore",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/business-support-and-advice/healthier-choices-award/healthier-choices-award",
+      "launchUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -21,7 +21,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/business-support-and-advice/healthier-choices-award/healthier-choices-award",
+      "launchUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
