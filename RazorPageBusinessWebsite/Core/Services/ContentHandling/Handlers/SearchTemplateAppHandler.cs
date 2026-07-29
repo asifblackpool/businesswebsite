@@ -1,15 +1,15 @@
 ﻿using Content.Modelling.Models.GenericTypes;
-using global::RazorPageBusinessWebsite.Core.Models.Components;
 using global::RazorPageBusinessWebsite.Core.Services.ContentHandling.Interfaces;
 using global::RazorPageBusinessWebsite.Helpers.Wrappers;
 using global::RazorPageBusinessWebsite.Helpers;
-    // File: Core/Services/ContentHandling/Handlers/SearchTemplateAppHandler.cs
+using Content.Modelling.Core.Models.Components;
 using Microsoft.AspNetCore.Html;
 
 
-    namespace RazorPageBusinessWebsite.Core.Services.ContentHandling.Handlers
-    {
-        public class SearchTemplateAppHandler : IContentHandler
+
+namespace RazorPageBusinessWebsite.Core.Services.ContentHandling.Handlers
+{
+    public class SearchTemplateAppHandler : IContentHandler
         {
             private readonly ISerializationHelper _serializer;
             private readonly IHttpContextAccessor _httpContextAccessor;

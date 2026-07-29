@@ -1,14 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using RazorPageBusinessWebsite.Constants;
 using RazorPageBusinessWebsite.Controllers.Base;
 using RazorPageBusinessWebsite.Services.Interfaces;
 
 namespace RazorPageBusinessWebsite.Controllers
 {
-    public class BusinessSectionController : DynamicCmsController
+    public class YourCouncilSectionController : DynamicCmsController
     {
-        // Tell the base controller to look for views in the "Business" folder
-        protected override string ViewFolder => "Business";
-        public BusinessSectionController(IZengentiClient cmsClient, ICmsViewModelFactory viewModelFactory, ILogger<BusinessSectionController> logger)
+        // Tell the base controller to look for views in the "Your council" folder
+        protected override string ViewFolder => WebsiteConstants.VIEW_FOLDER;
+        public YourCouncilSectionController(IZengentiClient cmsClient, ICmsViewModelFactory viewModelFactory, ILogger<YourCouncilSectionController> logger)
             : base(cmsClient, viewModelFactory, logger) { }
 
         public async Task<IActionResult> Index(string section, string slug)
@@ -16,13 +17,13 @@ namespace RazorPageBusinessWebsite.Controllers
             if (string.IsNullOrEmpty(section))
                 return NotFound();
 
-            // 1. Get the "business" root node
-            var businessNode = await _cmsClient.GetNodeByPathAsync("business");
-            if (businessNode == null)
+            // 1. Get the "your council" root node
+            var node = await _cmsClient.GetNodeByPathAsync(ViewFolder);
+            if (node == null)
                 return NotFound();
 
-            // 2. Get all direct children of the business node
-            var children = await _cmsClient.GetChildNodesAsync(businessNode.Path);
+            // 2. Get all direct children of the your council node
+            var children = await _cmsClient.GetChildNodesAsync(node.Path);
             if (children == null || children.Count == 0)
                 return NotFound();
 
@@ -39,8 +40,8 @@ namespace RazorPageBusinessWebsite.Controllers
                 ? matchedChild.Slug
                 : $"{matchedChild.Slug}/{slug}";
 
-            // 5. Delegate to base dynamic rendering (sectionRoot = "business")
-            return await RenderDynamicPageAsync("business", fullSlug);
+            // 5. Delegate to base dynamic rendering (sectionRoot = "your-council")
+            return await RenderDynamicPageAsync(ViewFolder, fullSlug);
         }
     }
 }
