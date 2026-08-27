@@ -20,7 +20,8 @@ using RazorPageBusinessWebsite.Services.Interfaces;
 using Zengenti.Contensis.Delivery;
 using Microsoft.AspNetCore.Rewrite;
 using Content.Modelling.Extensions;
-
+using Microsoft.Extensions.FileProviders.Physical;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,12 +31,12 @@ DotNetEnv.Env.TraversePath().Load();
 // Configure Forwarded Headers to trust the proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
-                           ForwardedHeaders.XForwardedProto |
-                           ForwardedHeaders.XForwardedHost;
-options.KnownNetworks.Clear();
-options.KnownProxies.Clear();
-options.AllowedHosts.Clear();
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                               ForwardedHeaders.XForwardedProto |
+                               ForwardedHeaders.XForwardedHost;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.AllowedHosts.Clear();
 });
 
 builder.Services.AddScoped<IContensisClientResolver, ContensisClientResolver>();
@@ -43,8 +44,8 @@ builder.Services.AddScoped<IContensisClientResolver, ContensisClientResolver>();
 // Register the concrete ContensisClient so that any class expecting it gets the correct per‑request client
 builder.Services.AddScoped<ContensisClient>(sp =>
 {
-var resolver = sp.GetRequiredService<IContensisClientResolver>();
-return resolver.GetClient();
+    var resolver = sp.GetRequiredService<IContensisClientResolver>();
+    return resolver.GetClient();
 });
 
 // Register generic data service (this depends on IContensisClient)
@@ -87,10 +88,10 @@ string relativeUrlPath = WebsiteConstants.SITE_VIEW_PATH.TrimEnd('/');
 builder.Services
     .AddRazorPages()
     .AddRazorPagesOptions(options =>
-{
-options.RootDirectory = "/Pages";
-options.Conventions.Add(new GlobalHeaderPageApplicationModelConvention());
-});
+    {
+        options.RootDirectory = "/Pages";
+        options.Conventions.Add(new GlobalHeaderPageApplicationModelConvention());
+    });
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IRequestContext, RequestContext>();
@@ -102,9 +103,9 @@ builder.Services.AddContentHandlers();
 // Add all content modelling services (one line!)
 builder.Services.AddContentModelling(builder.Configuration, options =>
 {
-options.DefaultCacheMinutes = 10;
-options.DebugTokenKey = "DebugToken";
-options.EnableDebugModeByDefault = false;
+    options.DefaultCacheMinutes = 10;
+    options.DebugTokenKey = "DebugToken";
+    options.EnableDebugModeByDefault = false;
 });
 
 // Register the factory that maps Contensis content types to view models
@@ -119,21 +120,42 @@ app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
-app.UseExceptionHandler("/Error");
-app.UseHsts();
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
 }
 else
 {
-app.Use(async (context, next) =>
-{
-context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-context.Response.Headers["Pragma"] = "no-cache";
-context.Response.Headers["Expires"] = "0";
-await next();
-});
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        context.Response.Headers["Pragma"] = "no-cache";
+        context.Response.Headers["Expires"] = "0";
+        await next();
+    });
 }
 
-app.UseStaticFiles();
+// ===== STATIC FILES WITH NO WATCHING IN PRODUCTION =====
+var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+
+if (app.Environment.IsDevelopment())
+{
+    // Development: Use default with file watching for hot reload
+    app.UseStaticFiles();
+}
+else
+{
+    // Production: DISABLE ALL file watching (FIXES THE INOTIFY ISSUE)
+    var physicalFileProvider = new PhysicalFileProvider(wwwrootPath);
+
+    // CRITICAL: Disable file watching mechanisms
+    physicalFileProvider.UsePollingFileWatcher = false;
+    physicalFileProvider.UseActivePolling = false;
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = physicalFileProvider
+    });
+}
 
 // Redirect root to your-council
 app.UseRewriter(new RewriteOptions().AddRedirect("^$", WebsiteConstants.SITE_PATH, app.Environment.IsDevelopment() ? 302 : 301));
@@ -158,8 +180,6 @@ app.MapControllerRoute(
     defaults: new { controller = string.Format("{0}Section", WebsiteConstants.SITE_CONTROLLER), action = "Index" }
 );
 
-
-
 app.UseMiddleware<BreadcrumbMiddleware>();
 app.UseStatusCodePagesWithReExecute("/Error");
 app.MapRazorPages(); // Razor Pages still available for non your council routes
@@ -167,18 +187,18 @@ app.MapRazorPages(); // Razor Pages still available for non your council routes
 // ===== WARM UP CONTENSIS CLIENT to avoid first‑request timeout =====
 using (var warmupScope = app.Services.CreateScope())
 {
-var warmupClient = warmupScope.ServiceProvider.GetRequiredService<IZengentiClient>();
-var logger = warmupScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-try
-{
-// Synchronous call to initialise the client (avoids async complications)
-warmupClient.GetNodeByPathAsync("/").GetAwaiter().GetResult();
-logger.LogInformation("Contensis client warmed up successfully.");
-}
-catch (Exception ex)
-{
-logger.LogWarning(ex, "Contensis client warm‑up failed – first request may be slow.");
-}
+    var warmupClient = warmupScope.ServiceProvider.GetRequiredService<IZengentiClient>();
+    var logger = warmupScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        // Synchronous call to initialise the client (avoids async complications)
+        warmupClient.GetNodeByPathAsync("/").GetAwaiter().GetResult();
+        logger.LogInformation("Contensis client warmed up successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Contensis client warm‑up failed – first request may be slow.");
+    }
 }
 
 app.Run();
