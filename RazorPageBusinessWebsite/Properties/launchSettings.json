@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
+      "applicationUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
       "sslPort": 44322
     }
   },
@@ -13,7 +13,7 @@
       "hotReloadProfile": "aspnetcore",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
+      "launchUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -21,7 +21,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/business-support-and-advice/e-bike-and-e-scooter-business-advice-repairs-modifications-conversions",
+      "launchUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

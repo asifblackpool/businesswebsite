@@ -1,18 +1,13 @@
 ﻿using Content.Modelling.Models.Interfaces;
 using RazorPageBusinessWebsite.Core.Interfaces;
-using Zengenti.Contensis.Delivery;
+using RazorPageBusinessWebsite.Services;
+using RazorPageBusinessWebsite.Models;
+
 
 namespace RazorPageBusinessWebsite.Infrastructure.Repositories
 {
     // Infrastructure/Repositories/ContensisRepository.cs
-    using Zengenti.Contensis.Delivery;
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Content.Modelling.Models.Interfaces;
-    using Content.Modelling.Models.Templates;
-    using RazorPageBusinessWebsite.Services;
-    using RazorPageBusinessWebsite.Models;
+
 
     public class ContensisContentRepository : IContentRepository
     {

@@ -5,11 +5,11 @@ using RazorPageBusinessWebsite.Services.Interfaces;
 
 namespace RazorPageBusinessWebsite.Controllers
 {
-    public class YourCouncilSectionController : DynamicCmsController
+    public class BusinessSectionController : DynamicCmsController
     {
         // Tell the base controller to look for views in the "Your council" folder
         protected override string ViewFolder => WebsiteConstants.VIEW_FOLDER;
-        public YourCouncilSectionController(IZengentiClient cmsClient, ICmsViewModelFactory viewModelFactory, ILogger<YourCouncilSectionController> logger)
+        public BusinessSectionController(IZengentiClient cmsClient, ICmsViewModelFactory viewModelFactory, ILogger<BusinessSectionController> logger)
             : base(cmsClient, viewModelFactory, logger) { }
 
         public async Task<IActionResult> Index(string section, string slug)
