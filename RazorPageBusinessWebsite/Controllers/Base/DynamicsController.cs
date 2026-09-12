@@ -5,6 +5,7 @@ using RazorPageBusinessWebsite.Models;
 using RazorPageBusinessWebsite.Services.Interfaces;
 using RazorPageBusinessWebsite.ViewModels;
 
+
 namespace RazorPageBusinessWebsite.Controllers.Base
 {
     public abstract class DynamicCmsController : Controller

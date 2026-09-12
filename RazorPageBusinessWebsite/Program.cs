@@ -12,7 +12,6 @@ using RazorPageBusinessWebsite.Helpers.Renderers;
 using RazorPageBusinessWebsite.Helpers.Renderers.Components;
 using RazorPageBusinessWebsite.Helpers.Serialisation;
 using RazorPageBusinessWebsite.Helpers.Wrappers;
-using RazorPageBusinessWebsite.Infrastructure.Repositories;
 using RazorPageBusinessWebsite.Middleware;
 using RazorPageBusinessWebsite.Services;
 using RazorPageBusinessWebsite.Services.Breadcrumb;
@@ -20,8 +19,7 @@ using RazorPageBusinessWebsite.Services.Interfaces;
 using Zengenti.Contensis.Delivery;
 using Microsoft.AspNetCore.Rewrite;
 using Content.Modelling.Extensions;
-using Microsoft.Extensions.FileProviders.Physical;
-using Microsoft.Extensions.FileProviders;
+using RazorPageBusinessWebsite.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +47,7 @@ builder.Services.AddScoped<ContensisClient>(sp =>
 });
 
 // Register generic data service (this depends on IContensisClient)
-builder.Services.AddTransient(typeof(IDataService<>), typeof(ContensisDataService<>));
+builder.Services.AddScoped(typeof(IDataService<>), typeof(ContensisDataService<>));
 builder.Services.AddTransient<IContentRepository, ContensisContentRepository>();
 
 // Register helpers
@@ -111,7 +109,15 @@ builder.Services.AddContentModelling(builder.Configuration, options =>
 // Register the factory that maps Contensis content types to view models
 builder.Services.AddScoped<ICmsViewModelFactory, CmsViewModelFactory>();
 
-builder.Services.AddMemoryCache();
+// ===== In-memory cache with size limit =====
+// SetSize(1) is used on every cache entry in ZengentiClientAdapter and
+// ContensisDataService, so this limit is enforced.
+// 1024 entries × ~5 min TTL is plenty for a site of this size; tune up if
+// you have a large number of distinct pages.
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024;
+});
 
 var app = builder.Build();
 
@@ -134,28 +140,7 @@ else
     });
 }
 
-// ===== STATIC FILES WITH NO WATCHING IN PRODUCTION =====
-var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-
-if (app.Environment.IsDevelopment())
-{
-    // Development: Use default with file watching for hot reload
-    app.UseStaticFiles();
-}
-else
-{
-    // Production: DISABLE ALL file watching (FIXES THE INOTIFY ISSUE)
-    var physicalFileProvider = new PhysicalFileProvider(wwwrootPath);
-
-    // CRITICAL: Disable file watching mechanisms
-    physicalFileProvider.UsePollingFileWatcher = false;
-    physicalFileProvider.UseActivePolling = false;
-
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = physicalFileProvider
-    });
-}
+app.UseStaticFiles();
 
 // Redirect root to your-council
 app.UseRewriter(new RewriteOptions().AddRedirect("^$", WebsiteConstants.SITE_PATH, app.Environment.IsDevelopment() ? 302 : 301));
@@ -164,16 +149,16 @@ app.UseRewriter(new RewriteOptions().AddRedirect("^$", WebsiteConstants.SITE_PAT
 
 app.UseRouting();
 
-string siteViewRoot = WebsiteConstants.SITE_VIEW_PATH.TrimStart('/').TrimEnd('/'); // "business"
+string siteViewRoot = WebsiteConstants.SITE_VIEW_PATH.TrimStart('/').TrimEnd('/'); // "your-council"
 
-// 1. EXACT match for /Business (or /business) – must come first
+// 1. EXACT match for /Your-counil (or /your-council) – must come first
 app.MapControllerRoute(
     name: string.Format("{0}_root_exact", WebsiteConstants.SITE_CONTROLLER),
-    pattern: WebsiteConstants.SITE_PATH,  // literal "business" (case‑insensitive matches business too)
+    pattern: WebsiteConstants.SITE_PATH,  // literal "Your-council" (case‑insensitive matches /your-council too)
     defaults: new { controller = WebsiteConstants.SITE_CONTROLLER, action = "Dynamic", slug = "" }
 );
 
-// 2. Section route for /business/{section}/... (requires at least one segment after business/)
+// 2. Your-counl Section route for /your-council/{section}/... (requires at least one segment after your-council/)
 app.MapControllerRoute(
     name: string.Format("{0}_section", WebsiteConstants.SITE_CONTROLLER),
     pattern: WebsiteConstants.SITE_PATH + "/{section}/{**slug}",

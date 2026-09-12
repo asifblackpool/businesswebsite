@@ -38,7 +38,6 @@ namespace RazorPageBusinessWebsite.Services
             }
         }
 
-
         public IHeaderDictionary Headers
         {
             get

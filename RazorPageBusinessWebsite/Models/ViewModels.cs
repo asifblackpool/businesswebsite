@@ -19,15 +19,6 @@ namespace RazorPageBusinessWebsite.Models
 
     }
 
-    public class BusinessRatesViewModel : BaseViewModel
-    {
-   
-    }
-
-    public class CommercialWasteViewModel : BaseViewModel
-    {
-    
-    }
 
     public class SectionRootViewModel : BaseViewModel
     {

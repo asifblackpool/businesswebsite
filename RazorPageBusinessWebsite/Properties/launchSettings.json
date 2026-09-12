@@ -3,17 +3,17 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
+      "applicationUrl": "https://localhost:5001/business/licensing-and-permits/housing-licences/mandatory-hmo-licensing",
       "sslPort": 44322
     }
   },
   "profiles": {
-    "RazorPageBusinessWebsite": {
+    "RazorPageCouncilWebsite": {
       "commandName": "Project",
       "hotReloadProfile": "aspnetcore",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
+      "launchUrl": "https://localhost:5001/business/licensing-and-permits/housing-licences/mandatory-hmo-licensing",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -21,7 +21,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/licensing-and-permits/alcohol-entertainment-and-food/premises-licences/dps-variationremoval",
+      "launchUrl": "https://localhost:5001/business/licensing-and-permits/housing-licences/mandatory-hmo-licensing",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

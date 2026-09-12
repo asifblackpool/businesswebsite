@@ -1,8 +1,6 @@
-﻿
-using global::RazorPageBusinessWebsite.ViewModels;
+﻿using global::RazorPageBusinessWebsite.ViewModels;
 using RazorPageBusinessWebsite.Services.Interfaces;
 using RazorPageBusinessWebsite.Models.Helpers;
-using SerializationHelper = RazorPageBusinessWebsite.Helpers.Serialisation.SerializationHelper;
 
 namespace RazorPageBusinessWebsite.Services
 {
@@ -11,26 +9,25 @@ namespace RazorPageBusinessWebsite.Services
         private readonly IDataService<dynamic> _dataService;
         private readonly ILogger<ContentViewModelService> _logger;
 
-        public ContentViewModelService(IDataService<dynamic> dataService, ILogger<ContentViewModelService> logger)
+        public ContentViewModelService(
+            IDataService<dynamic> dataService,
+            ILogger<ContentViewModelService> logger)
         {
             _dataService = dataService;
             _logger = logger;
         }
 
-        public async Task<DetailsViewModel> GetViewModelForPathAsync(string path)
+        public async Task<DetailsViewModel> GetViewModelForPathAsync(string path, Guid? entryId = null)
         {
-            var items = await _dataService.GetAllAsync(path);
+            var items = await _dataService.GetAllAsync(path, entryId);
+
             if (items == null || !items.Any())
             {
-                _logger.LogWarning($"No content found for path: {path}");
+                _logger.LogWarning("No content found for path: {Path}", path);
                 return new DetailsViewModel();
             }
 
- 
-            return ViewModelPopulator.PopulateFromItems(items,_dataService.StatusMessage());
+            return ViewModelPopulator.PopulateFromItems(items, _dataService.StatusMessage());
         }
-
     }
 }
-
-
