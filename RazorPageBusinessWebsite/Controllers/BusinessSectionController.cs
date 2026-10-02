@@ -4,7 +4,7 @@ using RazorPageBusinessWebsite.Controllers.Base;
 using RazorPageBusinessWebsite.Services.Interfaces;
 
 
-namespace RazorPageYourCouncilWebsite.Controllers
+namespace RazorPageBusinessWebsite.Controllers
 {
     public class BusinessSectionController : DynamicCmsController
     {

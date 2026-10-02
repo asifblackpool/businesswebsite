@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RazorPageBusinessWebsite.Models;
 using RazorPageBusinessWebsite.Services.Interfaces;
 using RazorPageBusinessWebsite.Constants;
 using RazorPageBusinessWebsite.Core.Interfaces;
@@ -23,10 +22,10 @@ namespace RazorPageBusinessWebsite.Pages.Home
         public async Task OnGetAsync(string slug)
         {
             // Build the Contensis path based on slug
-            string siteViewRoot = WebsiteConstants.SITE_VIEW_PATH.TrimStart('/'); // "business"
+            string siteViewRoot = WebsiteConstants.SITE_VIEW_PATH.TrimStart('/'); // "your-council"
             string nodePath = string.IsNullOrEmpty(slug)
-                ? $"/{siteViewRoot}"           // "/business" for root
-                : $"/{siteViewRoot}/{slug}";    // "/business/business-rates", etc.
+                ? $"/{siteViewRoot}"           // "/your-council" for root
+                : $"/{siteViewRoot}/{slug}";    // "/your-council/Comments-compliments-and-complaints", etc.
 
             // Fetch node from repository
             var node = await _contentRepo.GetNodeByPathAsync(nodePath);

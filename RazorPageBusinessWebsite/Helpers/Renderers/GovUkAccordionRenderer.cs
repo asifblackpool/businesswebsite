@@ -25,7 +25,7 @@ namespace RazorPageBusinessWebsite.Helpers.Renderers
             {
                 if (items == null || !items.Any())
                 {
-                    _logger.LogWarning("No accordion items provided for rendering");
+                    _logger.LogWarning("No accordion items provided for rendering ");
                     return HtmlString.Empty;
                 }
 
