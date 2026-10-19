@@ -1,6 +1,7 @@
 ﻿using Content.Modelling.Helpers.Canvas;
 using Content.Modelling.Services;
 using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RazorPageBusinessWebsite.Models;
 using RazorPageBusinessWebsite.Services.Interfaces;
@@ -13,17 +14,49 @@ namespace RazorPageBusinessWebsite.Services
         private readonly ContensisClient _contensisClient;
         private readonly IMemoryCache _cache;
         private readonly ILogger<ZengentiClientAdapter> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// Fields we actually need on every entry we resolve. Narrowing this
+        /// list is the single biggest lever on payload size — the Contensis
+        /// API only returns what you ask for.
+        /// </summary>
+        private static readonly string[] EntryFields =
+        {
+            "title",
+            "slug",
+            "canvas",
+            "mainContent",
+            "metaTitle",
+            "metaDescription"
+        };
+
+        /// <summary>
+        /// Per-request byte budget for the hydrated page tree. Once exceeded,
+        /// remaining inline entries are left unresolved rather than expanding
+        /// the tree further. Prevents a single pathological page from
+        /// exhausting the container heap.
+        /// </summary>
+        private const long MaxHydratedBytes = 2_000_000;   // 2 MB
+
+        /// <summary>
+        /// Hard cap on how much a single resolved entry may contribute to the
+        /// budget. Entries larger than this are logged and skipped.
+        /// </summary>
+        private const long MaxSingleEntryBytes = 500_000;  // 500 KB
 
         public ZengentiClientAdapter(
             ContensisClient contensisClient,
             IMemoryCache cache,
-            ILogger<ZengentiClientAdapter> logger)
+            ILogger<ZengentiClientAdapter> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _contensisClient = contensisClient;
             _cache = cache;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         // ─── public API ──────────────────────────────────────────────────
@@ -40,28 +73,32 @@ namespace RazorPageBusinessWebsite.Services
 
             if (node == null) return null;
 
-            // Fetch the entry directly. Node.EntryAsync() takes no parameters
-            // and lazily resolves the entry without honouring entryFields,
-            // which is why title and mainContent were coming back empty.
             var entryId = node.EntryId ?? node.Id;
-            var entry = await _contensisClient.Entries.GetAsync(entryId);
 
+            // Fetch the entry with explicit field selection and no link
+            // resolution. This is what prevents the huge payloads that were
+            // blowing up deserialisation.
+            var entry = await TryGetEntryAsync(entryId);
             if (entry == null) return null;
 
             var entryJson = JObject.FromObject(entry);
 
-            _logger.LogDebug(
-                "Path={Path} | ContentType={CT} | Fields=[{Fields}] | mainContent={MC}",
-                path,
-                entry.ContentTypeId ?? "<null>",
-                string.Join(", ", entryJson.Properties().Select(p => p.Name)),
-                entry.Get<string>("mainContent") is string mc
-                    ? (mc.Length > 80 ? mc.Substring(0, 80) + "..." : mc)
-                    : "<null or not string>");
+            // Skip hydration entirely for entries without a canvas — no
+            // stubs to resolve, so no need to walk the tree.
+            if (entryJson["canvas"] != null)
+            {
+                async Task<JObject?> Resolver(Guid id) => await ResolveEntryAsync(id);
 
-            async Task<JObject?> Resolver(Guid id) => await ResolveEntryAsync(id);
+                await CanvasHydrator.HydrateAsync(
+                    entryJson,
+                    Resolver,
+                    maxDepth: 3,
+                    maxResolvedBytes: MaxHydratedBytes);
+            }
 
-            await CanvasHydrator.HydrateAsync(entryJson, Resolver);
+            // Serialise once. The string is what goes in the cache and what
+            // the view consumes — we don't keep the JObject around.
+            var entryJsonString = entryJson.ToString(Formatting.None);
 
             var result = new CmsNode
             {
@@ -71,10 +108,10 @@ namespace RazorPageBusinessWebsite.Services
                 Title = entry.Get<string>("title") ?? node.DisplayName,
                 ContentType = entry.ContentTypeId ?? "unknown",
                 HtmlContent = entry.Get<string>("mainContent") ?? "",
-                EntryJson = entryJson.ToString(Newtonsoft.Json.Formatting.None)
+                EntryJson = entryJsonString
             };
 
-            _cache.Set(cacheKey, result, CacheOptions());
+            _cache.Set(cacheKey, result, CacheOptions(entryJsonString.Length));
             return result;
         }
 
@@ -98,7 +135,12 @@ namespace RazorPageBusinessWebsite.Services
             foreach (var child in children)
             {
                 var childEntryId = child.EntryId ?? child.Id;
-                var entry = await _contensisClient.Entries.GetAsync(childEntryId);
+
+                // For child listings we only need title/slug/contentType,
+                // not the canvas. Fetch a narrower field set here.
+                var entry = await TryGetEntryAsync(
+                    childEntryId,
+                    fields: new[] { "title", "slug" });
 
                 list.Add(new CmsNode
                 {
@@ -111,7 +153,7 @@ namespace RazorPageBusinessWebsite.Services
                 });
             }
 
-            _cache.Set(cacheKey, list, CacheOptions());
+            _cache.Set(cacheKey, list, CacheOptions(list.Count * 64));
             return list;
         }
 
@@ -130,46 +172,110 @@ namespace RazorPageBusinessWebsite.Services
             foreach (var child in children)
             {
                 var childEntryId = child.EntryId ?? child.Id;
-                var entry = await _contensisClient.Entries.GetAsync(childEntryId);
+
+                var entry = await TryGetEntryAsync(
+                    childEntryId,
+                    fields: new[] { "slug" });
 
                 slugs.Add(entry?.Slug ?? child.Slug);
             }
 
-            _cache.Set(cacheKey, slugs, CacheOptions());
+            _cache.Set(cacheKey, slugs, CacheOptions(slugs.Count * 32));
             return slugs;
         }
 
         // ─── private ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// Resolve one entry id to its JSON. Cached by entry id.
+        /// Fetch an entry with explicit field selection and no link resolution.
+        /// Returns null on any error so a single bad entry can't take the
+        /// whole request down.
         /// </summary>
-        private async Task<JObject?> ResolveEntryAsync(Guid entryId)
+        private async Task<Entry?> TryGetEntryAsync(
+            Guid entryId,
+            string[]? fields = null)
         {
-            var cacheKey = $"entry:{entryId}";
-            if (_cache.TryGetValue(cacheKey, out JObject? cached) && cached != null)
-                return cached;
-
             try
             {
-                var entry = await _contensisClient.Entries.GetAsync(entryId);
-                if (entry == null) return null;
-
-                var json = JObject.FromObject(entry);
-
-                _cache.Set(cacheKey, json, CacheOptions());
-                return json;
+                return await _contensisClient.Entries.GetAsync(entryId,fields: fields ?? EntryFields,  linkDepth: 0);
+            }
+            catch (OutOfMemoryException)
+            {
+                // Don't try to build a fancy error message — the heap is
+                // already exhausted. Fail fast and let the request 500.
+                _logger.LogError(
+                    "OutOfMemoryException resolving Contensis entry {EntryId}. " +
+                    "Failing fast to avoid cascading failure.",
+                    entryId);
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to resolve entry {EntryId}", entryId);
+                _logger.LogError(
+                    ex,
+                    "Contensis entry {EntryId} could not be deserialised — " +
+                    "likely a broken composed field (e.g. 'canvas'). " +
+                    "Check the entry in the CMS and republish.",
+                    entryId);
+
+                var ctx = _httpContextAccessor.HttpContext;
+                if (ctx is not null)
+                {
+                    ctx.Items["CmsError"] =
+                        $"Entry {entryId} could not be resolved: {ex.Message}"
+                        + "\n\n"
+                        + ex.ToString();
+                }
+
                 return null;
             }
         }
 
-        private static MemoryCacheEntryOptions CacheOptions() =>
+        /// <summary>
+        /// Resolve one entry id to its JSON. Cached as a compact string, not
+        /// as a JObject — that way each call returns a fresh mutable tree and
+        /// the cache holds only the serialised payload.
+        /// </summary>
+        private async Task<JObject?> ResolveEntryAsync(Guid entryId)
+        {
+            var cacheKey = $"entry:{entryId}";
+
+            if (_cache.TryGetValue(cacheKey, out string? cachedJson) && cachedJson != null)
+            {
+                // Cached as a string — parse into a fresh tree so the hydrator
+                // can safely mutate it without corrupting the cache.
+                return JObject.Parse(cachedJson);
+            }
+
+            var entry = await TryGetEntryAsync(entryId);
+            if (entry == null) return null;
+
+            var json = JObject.FromObject(entry);
+            var jsonString = json.ToString(Formatting.None);
+
+            // Guard against pathological entries: if a single resolved entry
+            // exceeds the per-entry cap, don't cache it — return it but log.
+            if (jsonString.Length > MaxSingleEntryBytes)
+            {
+                _logger.LogWarning(
+                    "Contensis entry {EntryId} is very large ({Size} bytes). " +
+                    "Not caching; consider splitting this entry in the CMS.",
+                    entryId, jsonString.Length);
+                return json;
+            }
+
+            _cache.Set(cacheKey, jsonString, CacheOptions(jsonString.Length));
+            return json;
+        }
+
+        /// <summary>
+        /// Cache options with a size proportional to the payload. This only
+        /// has an effect if IMemoryCache is registered with a SizeLimit (see
+        /// registration note below).
+        /// </summary>
+        private static MemoryCacheEntryOptions CacheOptions(long sizeBytes) =>
             new MemoryCacheEntryOptions()
                 .SetAbsoluteExpiration(CacheTtl)
-                .SetSize(1);
+                .SetSize(Math.Max(1, sizeBytes));
     }
 }

@@ -22,8 +22,8 @@ namespace RazorPageBusinessWebsite.Core.Services.ContentHandling.Handlers
         {
             var expected = typeof(Quote).Name;
             var result = className == expected;
-            System.Diagnostics.Debug.WriteLine(
-                $">>> QuoteHandler.CanHandle: incoming=\"{className}\" expected=\"{expected}\" match={result}");
+            //System.Diagnostics.Debug.WriteLine(
+             //   $">>> QuoteHandler.CanHandle: incoming=\"{className}\" expected=\"{expected}\" match={result}");
             return result;
         }
 

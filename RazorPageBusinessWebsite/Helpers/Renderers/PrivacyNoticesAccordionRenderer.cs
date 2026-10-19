@@ -1,12 +1,14 @@
-﻿using System.Text.Encodings.Web;
+﻿using System.IO;
+using System.Linq;
+using System.Text.Encodings.Web;
 using Content.Modelling.HtmlWrapper.PrivacyNotices;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-
 using RazorPageBusinessWebsite.Helpers.Interfaces;
-namespace RazorPageBusinessWebsite.Helpers.Wrappers
+
+namespace RazorPageBusinessWebsite.Helpers.Renderers
 {
     public class PrivacyNoticesAccordionRenderer : IPrivacyNoticesAccordionRenderer
     {
