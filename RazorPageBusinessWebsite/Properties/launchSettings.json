@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "https://localhost:5001/business/working-with-the-council/education-and-schools/schools-forum-membership",
+      "applicationUrl": "https://localhost:5001/business",
       "sslPort": 44322
     }
   },
@@ -13,7 +13,7 @@
       "hotReloadProfile": "aspnetcore",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/working-with-the-council/education-and-schools/schools-forum-membership",
+      "launchUrl": "https://localhost:5001/business",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -21,7 +21,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/business/working-with-the-council/education-and-schools/schools-forum-membership",
+      "launchUrl": "https://localhost:5001/business",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
