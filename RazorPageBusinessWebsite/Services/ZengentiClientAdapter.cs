@@ -73,7 +73,9 @@ namespace RazorPageBusinessWebsite.Services
 
             // ── Inline data entries: accordions ──
             "accordionName",
-            "accordionContent"
+            "accordionContent",
+            "accordionContentWithImages",
+            "accordionWithCTAContent",
         };
 
         /// <summary>
